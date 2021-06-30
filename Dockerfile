@@ -19,9 +19,9 @@ RUN wget https://repo.continuum.io/archive/Anaconda3-2020.11-Linux-x86_64.sh && 
 ENV PATH /opt/anaconda3/bin:$PATH
 
 # install nodejs (you have to need enable jupyter extension)
-# RUN conda install -y nodejs
+RUN conda install -y nodejs=10.13.0
 
-# update pip and conda
+# update pip and condas
 RUN pip install --upgrade pip
 
 WORKDIR /
