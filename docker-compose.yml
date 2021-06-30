@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  notebook:
+    build: .
+    image: my-lab
+    container_name: 'my-lab'
+    ports:
+      - '8888:8888'
+    volumes:
+      - './docker/work:/work'
