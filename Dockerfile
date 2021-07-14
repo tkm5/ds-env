@@ -2,6 +2,10 @@ FROM ubuntu:latest
 
 # update
 RUN apt-get -y update && apt-get install -y \
+libsm6 \
+libxext6 \
+libxrender-dev \
+libglib2.0-0 \
 sudo \
 wget \
 vim
@@ -16,8 +20,10 @@ rm -f Anaconda3-2021.05-Linux-x86_64.sh
 # set path
 ENV PATH /opt/anaconda3/bin:$PATH
 
-# update pip and conda
-RUN pip install --upgrade pip
+# update pip and conda and install packages
+RUN pip install --upgrade pip && \
+    pip install opencv-python && \
+    pip install nibabel
 
 WORKDIR /
 RUN mkdir /work
