@@ -16,7 +16,23 @@ def get_df_all(base_path='covid-data'):
     return rp_im_df.merge(rp_msk_df, on='FileName', suffixes=('Image', 'Mask'))
 
 
-def load_path(path):
+def load_nifti(path):
     nifti = nib.load(path)
     data = nifti.get_fdata()
     return np.rollaxis(data, axis=1, start=0)
+
+
+def label_color(mask_volume, 
+                ggo_color = [255, 0, 0],
+                consolidation_color = [0, 255, 0],
+                effusion_color = [0, 0, 255]):
+    
+    shp = mask_volume.shape
+    # make empty box
+    mask_color = np.zeros((shp[0], shp[1], shp[2], 3), dtype=np.float64)
+    # color setting
+    mask_color[np.equal(mask_volume, 1)] = ggo_color
+    mask_color[np.equal(mask_volume, 2)] = consolidation_color
+    mask_color[np.equal(mask_volume, 3)] = effusion_color
+
+    return mask_color
