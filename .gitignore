@@ -3,3 +3,7 @@ covid-data/
 
 # jupyter notebook
 .ipynb_checkpoints
+
+sukkiri/
+
+.DS_Store
