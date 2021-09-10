@@ -22,6 +22,8 @@ ENV PATH /opt/anaconda3/bin:$PATH
 
 # update pip and conda and install packages
 RUN pip install --upgrade pip && \
+    pip install tensorflow && \
+    pip install tf-nightly && \
     pip install opencv-python && \
     pip install nibabel && \
     apt-get install -y libgl1-mesa-dev
