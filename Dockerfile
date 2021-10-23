@@ -26,7 +26,11 @@ RUN pip install --upgrade pip && \
     pip install tf-nightly && \
     pip install opencv-python && \
     pip install nibabel && \
+    pip install pystan==2.19.1.1 && \
     apt-get install -y libgl1-mesa-dev
+
+RUN conda install -y -c conda-forge prophet &&\
+    conda install -y plotly
 
 WORKDIR /
 RUN mkdir /work
