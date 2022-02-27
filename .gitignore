@@ -7,3 +7,6 @@ covid-data/
 sukkiri/
 
 .DS_Store
+
+# token file
+token/
