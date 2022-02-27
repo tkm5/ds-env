@@ -4,9 +4,12 @@ covid-data/
 # jupyter notebook
 .ipynb_checkpoints
 
+# token file
+token/
+*.json
+
+# other files
+
 sukkiri/
 
 .DS_Store
-
-# token file
-token/
