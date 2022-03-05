@@ -1,6 +1,9 @@
 # img data
 covid-data/
 
+# zip file
+*.zip
+
 # jupyter notebook
 .ipynb_checkpoints
 
