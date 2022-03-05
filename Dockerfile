@@ -33,10 +33,14 @@ RUN pip install --upgrade pip && \
 WORKDIR /
 RUN mkdir /work && \
     mkdir /root/.kaggle && \
-    mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/
+    mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \
+    mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/
 
 # black theme and line number display settings
-RUN echo '{"theme":"JupyterLab Dark"}' > /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/themes.jupyterlab-settings
+RUN echo '{"theme":"JupyterLab Dark"}' > \
+    /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/themes.jupyterlab-settings && \
+    echo '{"codeCellConfig": {"lineNumbers": true}}' > \
+    /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/tracker.jupyterlab-settings
 
 # execute jupyterlab as a default command
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token=''"]
