@@ -13,22 +13,17 @@ vim
 #install anaconda3
 WORKDIR /opt
 # download anaconda package and install anaconda
-# archive -> https://repo.continuum.io/archive/
-RUN wget https://repo.anaconda.com/archive/Anaconda3-2021.05-Linux-x86_64.sh && \
-sh /opt/Anaconda3-2021.05-Linux-x86_64.sh -b -p /opt/anaconda3 && \
-rm -f Anaconda3-2021.05-Linux-x86_64.sh
+# archive -> https://repo.anaconda.com/archive
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh && \
+bash /opt/Anaconda3-2021.11-Linux-x86_64.sh -b -p /opt/anaconda3 && \
+rm -f Anaconda3-2021.11-Linux-x86_64.sh
 # set path
 ENV PATH /opt/anaconda3/bin:$PATH
 
 # update pip and conda and install packages
 RUN pip install --upgrade pip && \
     pip install tensorflow && \
-    pip install kaggle && \
-    pip install tf-nightly && \
-    pip install opencv-python && \
-    pip install nibabel && \
-    pip install pystan==2.19.1.1 && \
-    apt install -y libgl1-mesa-dev
+    pip install kaggle
 
 WORKDIR /
 RUN mkdir /work && \
