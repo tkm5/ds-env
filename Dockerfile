@@ -25,7 +25,7 @@ RUN pip install --upgrade pip && \
     pip install tensorflow && \
     # optional pkgs
     pip install kaggle && \
-    pip install jupyterlab_vim && \
+    pip install lckr-jupyterlab-variableinspector && \
     apt install zip unzip
 
 WORKDIR /
