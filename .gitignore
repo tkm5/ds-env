@@ -11,6 +11,9 @@ public-covid-data/
 token/
 *.json
 
+# secret data 
+*.csv
+
 # other files
 
 sukkiri/
