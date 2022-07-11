@@ -25,8 +25,10 @@ RUN pip install --upgrade pip && \
     pip install tensorflow && \
     # optional pkgs
     pip install kaggle && \
+    pip install japanize_matplotlib && \
     pip install lckr-jupyterlab-variableinspector && \
-    apt install zip unzip
+    apt install zip unzip && \
+    pip install slack_sdk
 
 WORKDIR /
 RUN mkdir /work && \
@@ -41,4 +43,4 @@ COPY settings/tracker.jupyterlab-settings /root/.jupyter/lab/user-settings/@jupy
 COPY settings/kaggle.json /root/.kaggle/
 
 # execute jupyterlab as a default command
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token=''"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token='jl'"]
