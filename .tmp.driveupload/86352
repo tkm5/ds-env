@@ -1,0 +1,1367 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "9287d24d-8f74-4bd2-96c0-6f63e69461ea",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "<font size=10em>Activity Data Preparation</font>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "467e4641-d094-41ec-bf5a-bd13b8dbdf5c",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n",
+     "is_executing": true
+    }
+   },
+   "outputs": [],
+   "source": [
+    "__author__ = 'takumi goseki'\n",
+    "__version__ =  2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "87905916-ae0a-471e-8196-850d5df3d4d3",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "# preproccing"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "a06860d4-dd24-4491-a330-e832e5a52480",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "from pathlib import Path\n",
+    "from glob import glob\n",
+    "from tqdm.notebook import tqdm\n",
+    "\n",
+    "\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "pd.set_option('display.max_rows', 60)\n",
+    "pd.set_option('display.max_columns', None)\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
+    "import japanize_matplotlib \n",
+    "import seaborn as sns\n",
+    "sns.set(font=\"IPAexGothic\", context=\"talk\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "879d64c7-08ef-4a13-b540-cf984cc108bb",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    },
+    "tags": []
+   },
+   "source": [
+    "## 関数定義"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "d9faa843-f017-4a18-a09d-5b02742d3dcf",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "def columns_reshape(data_frame, col_one_line=True, connection_character=''):\n",
+    "    \"\"\"\n",
+    "    綺麗になった，dataframe が返される\n",
+    "    Args:\n",
+    "        data_frame: dataframe\n",
+    "        col_one_line: 返されるデータフレームのカラムをマルチカラムにしない場合はTrue\n",
+    "        connection_character: マルチインデックスを解除するときに結合する文字列の指定\n",
+    "\n",
+    "    Returns:\n",
+    "        dataframe\n",
+    "\n",
+    "    参考URL\n",
+    "    https://qiita.com/noca/items/966f4c5ae5eee8195fe0\n",
+    "\n",
+    "    \"\"\"\n",
+    "    df = data_frame.copy()\n",
+    "    if type(df.columns) is not pd.MultiIndex:\n",
+    "        return df\n",
+    "\n",
+    "    # 列にUnnamedという文字の入った内容を削除しインデックスを振り直す\n",
+    "    df = df.rename(columns=lambda x: '' if 'Unnamed' in str(x) else x)\n",
+    "\n",
+    "    cols = df.columns\n",
+    "    copy_col = list(cols)\n",
+    "\n",
+    "    # 無効セルは上に詰める\n",
+    "    for i, col in enumerate(copy_col):\n",
+    "        pack = [content for content in col if content != \"\"]\n",
+    "        copy_col[i] = tuple(pack + ([\"\"] * (len(col) - len(pack))))\n",
+    "\n",
+    "    df.columns = pd.MultiIndex.from_tuples(copy_col)\n",
+    "    # multi-columnsを1行に\n",
+    "    if col_one_line:\n",
+    "        df.columns = df.columns.to_series().apply(f'{connection_character}'.join)\n",
+    "        if len(connection_character) > 0:\n",
+    "            df.columns = [col[:-1] if col[-1] == f'{connection_character}' else col for col in df.columns]\n",
+    "    cols.names = tuple([None for x in cols.names])\n",
+    "    return df\n",
+    "\n",
+    "\n",
+    "def slack_dm(msg=\"DONE\"):\n",
+    "    \"\"\"\n",
+    "    send a DM to your slack when the process is finished.\n",
+    "    Args:\n",
+    "        msg: content of the message you want to send.\n",
+    "\n",
+    "    Returns:\n",
+    "        Nothing.\n",
+    "\n",
+    "    Settings:\n",
+    "        1. login https://api.slack.com/apps/\n",
+    "        2. select your workspace\n",
+    "        3. choose bot (Scopes)\n",
+    "        4. add permission -> im:write\n",
+    "        5. install to workspace\n",
+    "        6. make slack.json\n",
+    "            ex) slack.json\n",
+    "            {\n",
+    "\t            \"token\":\"xoxb-999999999999-9999999999999-xxxxxxxxxxxxxxxxxxxxxxxx\",\n",
+    "            \t\"user_id\":\"xxxxxxxxxxx\"\n",
+    "            }\n",
+    "    \"\"\"\n",
+    "    with open(\"slack.json\", mode=\"r\") as f:\n",
+    "        json_data = json.load(f)\n",
+    "\n",
+    "    token = json_data[\"token\"]\n",
+    "\n",
+    "    client = WebClient(token)\n",
+    "    user_id = json_data[\"user_id\"]\n",
+    "\n",
+    "    res = client.conversations_open(users=user_id)\n",
+    "    dm_id = res['channel']['id']\n",
+    "    if msg == \"ERROR\":\n",
+    "        import traceback\n",
+    "        slack_dm('ERROR')\n",
+    "        traceback.print_exc()\n",
+    "    else:\n",
+    "        text = f\"{msg}\"\n",
+    "    client.chat_postMessage(channel=dm_id, text=text)\n",
+    "\n",
+    "\n",
+    "def get_file_path(file_name):\n",
+    "    \"\"\"\n",
+    "    file_path 取得のための関数\n",
+    "    Args:\n",
+    "        file_name: パスを取得したいファイル名を入れる\n",
+    "\n",
+    "    Returns:\n",
+    "        ファイルパスが文字列にて返される\n",
+    "\n",
+    "    \"\"\"\n",
+    "    file_path = df_file_list.loc[file_name, 'path']\n",
+    "    return str(file_path)\n",
+    "\n",
+    "\n",
+    "def classify_dtl_kind(df, start=0, end=14, step=13, correspondence_table=False):\n",
+    "    \"\"\"\n",
+    "    活動データフレームを活動内容ごとのデータに分割\n",
+    "\n",
+    "    Args:\n",
+    "        df: 分割前のDataFrame\n",
+    "        start: 分割を始める列番号\n",
+    "        end: 分割を終える列番号\n",
+    "        step: 活動の区間列数\n",
+    "        correspondence_table: 返されたリストのインデックスと活動内容の対応表を表示するか\n",
+    "\n",
+    "    Returns:\n",
+    "        分割後のDataFrameをlistに格納して返す\n",
+    "    \"\"\"\n",
+    "    df_list = []\n",
+    "    for i in range(start, end):\n",
+    "        df_tmp = df.iloc[:, i::step]\n",
+    "        df_list.append(df_tmp)\n",
+    "\n",
+    "    if correspondence_table:\n",
+    "        print(\n",
+    "            \"\"\"\n",
+    "            === df list 対応表===\n",
+    "            0: 'アドバイザリー実績参加回数',\n",
+    "            1: 'ディテール実施回数_LINE WORKS',\n",
+    "            2: 'ディテール実施回数_MINDメール',\n",
+    "            3: 'ディテール実施回数_Pr.JOY',\n",
+    "            4: 'ディテール実施回数_my MR君',\n",
+    "            5: 'ディテール実施回数_オンライン',\n",
+    "            6: 'ディテール実施回数_リアル',\n",
+    "            7: 'ディテール実施回数_郵送',\n",
+    "            8: 'ディテール実施回数_電話',\n",
+    "            9: '症例フォロー実施回数',\n",
+    "            10: '社外講師実績参加回数',\n",
+    "            11: '説明会実績参加回数',\n",
+    "            \"\"\"\n",
+    "        )\n",
+    "\n",
+    "    return df_list"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "c629cdc6",
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['【本部】MeGE一覧']"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "xlsx = pd.ExcelFile('/work/job/msp/raw_marketing/マ9 調剤薬局本部マスタ.xlsx')\n",
+    "xlsx.sheet_names"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "a335222e-c9e6-4ac0-80dc-e125e6d8cc95",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# 親子マスターの作成\n",
+    "xlsx_dtl_parent = pd.ExcelFile(\"raw_marketing/マ9 調剤薬局本部マスタ.xlsx\")\n",
+    "df_dtl_parent_master = xlsx_dtl_parent.parse(\"【本部】MeGE一覧\", skiprows=4, dtype='object')\n",
+    "df_dtl_parent_master = df_dtl_parent_master.drop(\"Unnamed: 0\",axis=1)\n",
+    "df_dtl_parent_master.columns = df_dtl_parent_master.columns.str.replace('\\n', '')\n",
+    "# df_dtl_parent_master = df_dtl_parent_master[['子_施設コード', '子_施設グループ(本部)']]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "e03780b9-cce7-450e-b2d4-0a6c717be2f1",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>path</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>file_name</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "Empty DataFrame\n",
+       "Columns: [path]\n",
+       "Index: []"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_source_folder = 'raw_marketing'\n",
+    "p = Path(f'{data_source_folder}/')\n",
+    "path_list = [p for p in glob(f'{data_source_folder}/*')]\n",
+    "file_list = [os.path.split(p)[-1] for p in glob(f'{data_source_folder}/*')]\n",
+    "df_file_list = pd.DataFrame({'path': path_list, 'file_name': file_list}).set_index('file_name')\n",
+    "df_file_list"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "502a2a89-54bc-4909-b5e2-ce81fe9e128d",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>path</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>file_name</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>活3 DTL再集計.xlsx</th>\n",
+       "      <td>raw_marketing/活3 DTL再集計.xlsx</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>活3 DTL再集計2.xlsx</th>\n",
+       "      <td>raw_marketing/活3 DTL再集計2.xlsx</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                          path\n",
+       "file_name                                     \n",
+       "活3 DTL再集計.xlsx    raw_marketing/活3 DTL再集計.xlsx\n",
+       "活3 DTL再集計2.xlsx  raw_marketing/活3 DTL再集計2.xlsx"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# 活3ファイルリストの確認\n",
+    "\n",
+    "df_file_list3 = df_file_list[df_file_list.index.str.contains('活3')]\n",
+    "df_file_list3"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "025808d4-8c26-414a-a7fa-4fe24410d402",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "6cb0c6fa99224fe6acd0a13d3bef383b",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/2 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "file name: 活3 DTL再集計.xlsx\n"
+     ]
+    },
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "c651aa5d388c4153900110f4b3aec0cb",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/5 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0]sheet name: 2022上\n",
+      "[1]sheet name: 2021下\n",
+      "[2]sheet name: 2021上\n",
+      "[3]sheet name: 2020下\n",
+      "[4]sheet name: 2020上\n",
+      "-----------------------------------------------------------------------------------------\n",
+      "file name: 活3 DTL再集計2.xlsx\n"
+     ]
+    },
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "74fc5d3dbc3342dba0edb1d8ae62a642",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/1 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0]sheet name: Sheet1\n",
+      "-----------------------------------------------------------------------------------------\n"
+     ]
+    }
+   ],
+   "source": [
+    "dtl_df_list = []\n",
+    "for file in tqdm(list(df_file_list3.index)):\n",
+    "    xlsx = pd.ExcelFile(get_file_path(file))\n",
+    "    print(f'file name: {file}')\n",
+    "    \n",
+    "    sheet_list = xlsx.sheet_names\n",
+    "    for idx, sheet in tqdm(enumerate(sheet_list), total=len(sheet_list)):\n",
+    "        print(f'[{idx}]sheet name: {sheet}')\n",
+    "        df_tmp = xlsx.parse(sheet_name=sheet,\n",
+    "                            skiprows=4,\n",
+    "                            skipfooter=1,\n",
+    "                            header=[0, 1],\n",
+    "                            dtype='object')\n",
+    "        \n",
+    "        df_tmp = columns_reshape(df_tmp)\n",
+    "        df_tmp = df_tmp.drop('', axis=1)\n",
+    "        dtl_df_list.append(df_tmp)\n",
+    "    print('-'*89)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "007aa26b-66b5-4f34-b285-1c24e4797198",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['子_施設コード',\n",
+       " '医師コード',\n",
+       " '役職略名',\n",
+       " '医師薬剤師区分',\n",
+       " '入力者MRコード',\n",
+       " '品目略号',\n",
+       " 'ディテールアポあり実施回数',\n",
+       " 'ディテール内容',\n",
+       " '年月_表示用実施方法']"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "key_cols = list(dtl_df_list[0].columns[:9])\n",
+    "key_cols"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "473ffe1f-9cb9-4b36-9cc9-d6e7d318bdbe",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "829d8b4845644f7490161dd7699ba1b3",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/5 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "dtl_df = dtl_df_list[0]\n",
+    "for i in tqdm(range(1, len(dtl_df_list)), total=len(dtl_df_list)-1):\n",
+    "    dtl_df = pd.merge(dtl_df, dtl_df_list[i], on=key_cols, how='outer')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "b9cb66b6-018a-4f7a-9289-4b1ee542234e",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "dtl_df.to_csv('dtl_df.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "06333509",
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "# 活3 集計"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "8baba27b-61e3-4258-902e-c56e6079ac23",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# dtl_df = pd.read_csv('dtl_df.csv', dtype='object')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5c467204-ce54-49f5-95aa-46d080baab64",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## object df 処理"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "4add36f6-bb64-4bc4-8d4c-c95c79fefc69",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# object で欲しいカラムのみ抽出\n",
+    "dtl_df_object = dtl_df.loc[:, '子_施設コード':'年月_表示用実施方法']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "29af3624-5818-4c86-94ae-a068fa073014",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# 本部・個店紐付け\n",
+    "dtl_df_object = pd.merge(dtl_df_object, df_dtl_parent_master[['子_施設コード', '子_施設グループコード']], on='子_施設コード', how='left')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "46305125-c1ab-4f99-b382-ea565a0d7709",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## float df 処理"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "57ba48a8-14c6-4fbe-85aa-d4bbfa1e87e0",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# float で欲しいカラム(DTL実施回数)のみ抽出して，object -> float に変換\n",
+    "dtl_df_float = dtl_df.iloc[:, 9:].astype('float')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "7ebbd738-d88e-4e4d-9d68-5b980ca800fd",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "dtl_sum_df = dtl_df_float.iloc[:, 0::4]\n",
+    "\n",
+    "cols = [col[:8] for col in dtl_sum_df.columns]\n",
+    "dtl_sum_df.columns = cols\n",
+    "dtl_sum_df = dtl_sum_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "440b9e03-e91f-436f-a825-c66f58c92ce5",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "dtl_first_df = dtl_df_float.iloc[:, 1::4]\n",
+    "\n",
+    "cols = [col[:8] for col in dtl_first_df.columns]\n",
+    "dtl_first_df.columns = cols\n",
+    "dtl_first_df = dtl_first_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "a28b36ad-c8d4-4e06-9ba0-a3e2b0985906",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "dtl_second_df = dtl_df_float.iloc[:, 2::4]\n",
+    "\n",
+    "cols = [col[:8] for col in dtl_second_df.columns]\n",
+    "dtl_second_df.columns = cols\n",
+    "dtl_second_df = dtl_second_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "ecdcdc2e-240a-4417-b3e6-845b5a5763bf",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "dtl_third_df = dtl_df_float.iloc[:, 3::4]\n",
+    "\n",
+    "cols = [col[:8] for col in dtl_third_df.columns]\n",
+    "dtl_third_df.columns = cols\n",
+    "dtl_third_df = dtl_third_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "72d69b4f-9113-4946-9bbd-341960d6f782",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## merge"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "f4614485-feba-4886-969f-37f1f590562b",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    " # object df と float df を横にくっつける\n",
+    "dtl_sum_df = pd.concat([dtl_df_object, dtl_sum_df], axis=1)\n",
+    "dtl_first_df = pd.concat([dtl_df_object, dtl_first_df], axis=1)\n",
+    "dtl_second_df = pd.concat([dtl_df_object, dtl_second_df], axis=1)\n",
+    "dtl_third_df = pd.concat([dtl_df_object, dtl_third_df], axis=1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f65581f2-f1fa-42d4-8b78-e76271fa6aaa",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## export csv"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "65382f41-dc47-4955-9908-7ca3203b9686",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "dtl_sum_df.to_csv('dtl_sum_df.csv')\n",
+    "dtl_first_df.to_csv('dtl_first_df.csv')\n",
+    "dtl_second_df.to_csv('dtl_second_df.csv')\n",
+    "dtl_third_df.to_csv('dtl_third_df.csv')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b52226f7-394b-448b-8b32-9668dddccb9e",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "# 活4 集計"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "5b4977c0-5a1d-4b6c-a3b4-18041611bb9c",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>path</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>file_name</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>活4 活動_全活動.xlsx</th>\n",
+       "      <td>raw_marketing/活4 活動_全活動.xlsx</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>活4 活動_全活動_2.xlsx</th>\n",
+       "      <td>raw_marketing/活4 活動_全活動_2.xlsx</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                            path\n",
+       "file_name                                       \n",
+       "活4 活動_全活動.xlsx      raw_marketing/活4 活動_全活動.xlsx\n",
+       "活4 活動_全活動_2.xlsx  raw_marketing/活4 活動_全活動_2.xlsx"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# 活3ファイルリストの確認\n",
+    "\n",
+    "df_file_list4 = df_file_list[df_file_list.index.str.contains('活4')]\n",
+    "df_file_list4"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "83b0d8b9-7462-424b-88f6-3643ba41dec5",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "9bd64408dd8c416db43f7a9e6e7a5c06",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/2 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "file name: 活4 活動_全活動.xlsx\n"
+     ]
+    },
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "1edea4b5ad144fadae7d412158a3a556",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/3 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0]sheet name: 2020下\n",
+      "[1]sheet name: 2020上\n",
+      "[2]sheet name: 2019下\n",
+      "-----------------------------------------------------------------------------------------\n",
+      "file name: 活4 活動_全活動_2.xlsx\n"
+     ]
+    },
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "05f47282f52f45fbab3ee5767bbc0b83",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/1 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0]sheet name: Sheet1\n",
+      "-----------------------------------------------------------------------------------------\n"
+     ]
+    }
+   ],
+   "source": [
+    "act_df_list = []\n",
+    "for file in tqdm(list(df_file_list4.index)):\n",
+    "    xlsx = pd.ExcelFile(get_file_path(file))\n",
+    "    print(f'file name: {file}')\n",
+    "    \n",
+    "    sheet_list = xlsx.sheet_names\n",
+    "    for idx, sheet in tqdm(enumerate(sheet_list), total=len(sheet_list)):\n",
+    "        print(f'[{idx}]sheet name: {sheet}')\n",
+    "        df_tmp = xlsx.parse(sheet_name=sheet,\n",
+    "                            skiprows=4,\n",
+    "                            skipfooter=1,\n",
+    "                            header=[1, 2],\n",
+    "                            dtype='object')\n",
+    "        \n",
+    "        df_tmp = columns_reshape(df_tmp)\n",
+    "        df_tmp = df_tmp.drop('', axis=1)\n",
+    "        act_df_list.append(df_tmp)\n",
+    "    print('-'*89)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "918da109-6339-4051-8deb-d1d672abc3a0",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['子_施設コード', '医師コード', '医師薬剤師区分', '役職略名', '年月_表示用品目略号']"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "key_cols = list(act_df_list[0].columns[:5])\n",
+    "key_cols"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "d994cdef-7a02-46c3-b70c-a4ed3342e9b7",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "ffa992e70180410691acfb7d6ba5d0fe",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "  0%|          | 0/3 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "act_df = act_df_list[0]\n",
+    "for i in tqdm(range(1, len(act_df_list)), total=len(act_df_list)-1):\n",
+    "    act_df = pd.merge(act_df, act_df_list[i], on=key_cols, how='outer')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "72ba2fcb-50f5-4450-9834-8c9df0b491c3",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_df = act_df[[col for col in act_df.columns if 'ディテール' not in col]]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "1965bb16-af68-4983-8297-8e0feeacac8e",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_df.to_csv('act_df.csv', index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "db184c11-64c9-4de8-ba00-62596899eb81",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# act_df = pd.read_csv('act_df.csv', dtype='object')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2b069a80-2999-44bc-8ac8-7c79c4b0bbb5",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## object df 処理"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "66b8a1bd-1e11-4494-aff9-ac9d44a78863",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# object で欲しいカラムのみ抽出\n",
+    "act_df_object = act_df.loc[:, '子_施設コード':'年月_表示用品目略号']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "15222261-4e8b-49c4-bc39-ff7e47257080",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# 本部・個店紐付け\n",
+    "act_df_object = pd.merge(act_df_object, df_dtl_parent_master[['子_施設コード', '子_施設グループコード']], on='子_施設コード', how='left')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8e448986-faac-47a4-9814-ba1ae8f590b0",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## float df 処理"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "54acdd67-7e58-49cf-af9e-9a6b1184e972",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# float で欲しいカラム(DTL実施回数)のみ抽出して，object -> float に変換\n",
+    "act_df_float = act_df.iloc[:, 5:].astype('float')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "a43ddd45-cab3-4fb9-899e-30d245fcfda9",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_koenkai_df = act_df_float[[col for col in act_df_float.columns if '講演会' in col]]\n",
+    "\n",
+    "cols = [col[:8] for col in act_koenkai_df.columns]\n",
+    "act_koenkai_df.columns = cols\n",
+    "act_koenkai_df = act_koenkai_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "id": "9c85c6aa-8c9d-4cfd-b576-ace6f8bcc935",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_setsumeikai_df = act_df_float[[col for col in act_df_float.columns if '説明会' in col]]\n",
+    "\n",
+    "cols = [col[:8] for col in act_setsumeikai_df.columns]\n",
+    "act_setsumeikai_df.columns = cols\n",
+    "act_setsumeikai_df = act_setsumeikai_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "id": "e51eb938-2753-458a-bae6-3c69f1ff40bb",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_advisory_df = act_df_float[[col for col in act_df_float.columns if 'アドバイザリー' in col]]\n",
+    "\n",
+    "cols = [col[:8] for col in act_advisory_df.columns]\n",
+    "act_advisory_df.columns = cols\n",
+    "act_advisory_df = act_advisory_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "id": "f7ff4860-121e-4414-963f-96d690c94e02",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_syagaikoushi_df = act_df_float[[col for col in act_df_float.columns if '社外講師' in col]]\n",
+    "\n",
+    "cols = [col[:8] for col in act_syagaikoushi_df.columns]\n",
+    "act_syagaikoushi_df.columns = cols\n",
+    "act_syagaikoushi_df = act_syagaikoushi_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "id": "c2f6e8c0-85ea-4a1c-9330-64483be0c084",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_shoreifollow_df = act_df_float[[col for col in act_df_float.columns if '症例フォロー' in col]]\n",
+    "\n",
+    "cols = [col[:8] for col in act_shoreifollow_df.columns]\n",
+    "act_shoreifollow_df.columns = cols\n",
+    "act_shoreifollow_df = act_shoreifollow_df[sorted(cols)]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a17fff38-9404-4074-b907-0eafe3293374",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## merge"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "id": "6a05b3e5-a37c-4cb6-93ce-93b54347a07f",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "#  # object df と float df を横にくっつける\n",
+    "act_koenkai_df = pd.concat([act_df_object, act_koenkai_df], axis=1)\n",
+    "act_setsumeikai_df = pd.concat([act_df_object, act_setsumeikai_df], axis=1)\n",
+    "act_advisory_df = pd.concat([act_df_object, act_advisory_df], axis=1)\n",
+    "act_syagaikoushi_df = pd.concat([act_df_object, act_syagaikoushi_df], axis=1)\n",
+    "act_shoreifollow_df = pd.concat([act_df_object, act_shoreifollow_df], axis=1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4c66079a-42ce-4968-b590-92c9a52ad78d",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## export csv"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "id": "53efd076-a82f-4b42-a908-79b1768a14df",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "act_koenkai_df.to_csv('講演会.csv')\n",
+    "act_setsumeikai_df.to_csv('説明会.csv')\n",
+    "act_advisory_df.to_csv('アドバイザリー.csv')\n",
+    "act_syagaikoushi_df.to_csv('社外講師.csv')\n",
+    "act_shoreifollow_df.to_csv('症例フォロー.csv')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7c1380da-3c7e-4098-b1e5-a481f7d71dc6",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "# export html "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "id": "21a15c8f-7b6c-4362-9850-61ce889f440b",
+   "metadata": {
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# !jupyter nbconvert --to html business_activities2.ipynb --HTMLExporter.theme=dark\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

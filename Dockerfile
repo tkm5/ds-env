@@ -44,4 +44,4 @@ COPY settings/tracker.jupyterlab-settings /root/.jupyter/lab/user-settings/@jupy
 COPY settings/kaggle.json /root/.kaggle/
 
 # execute jupyterlab as a default command
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token=''"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token='jl'"]
