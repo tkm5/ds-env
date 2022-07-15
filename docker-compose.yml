@@ -6,7 +6,7 @@ services:
     image: 'ds-lab'
     container_name: 'ds-lab'
     # if you use apple silicon mac, active line below
-    # platform: linux/x86_64
+    platform: linux/x86_64
     ports:
       - '8888:8888'
     volumes:

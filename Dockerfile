@@ -8,7 +8,8 @@ libxrender-dev \
 libglib2.0-0 \
 sudo \
 wget \
-vim
+tmux \
+emacs
 
 #install anaconda3
 WORKDIR /opt
@@ -25,8 +26,10 @@ RUN pip install --upgrade pip && \
     pip install tensorflow && \
     # optional pkgs
     pip install kaggle && \
+    pip install japanize_matplotlib && \
     pip install lckr-jupyterlab-variableinspector && \
-    apt install zip unzip
+    apt install zip unzip && \
+    pip install slack_sdk
 
 WORKDIR /
 RUN mkdir /work && \
