@@ -13,11 +13,13 @@ emacs
 
 #install anaconda3
 WORKDIR /opt
+
 # download anaconda package and install anaconda
 # archive -> https://repo.anaconda.com/archive
-RUN wget https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh && \
-bash /opt/Anaconda3-2021.11-Linux-x86_64.sh -b -p /opt/anaconda3 && \
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh && \
+bash /opt/Anaconda3-2022.05-Linux-x86_64.sh -b -p /opt/anaconda3 && \
 rm -f Anaconda3-2021.11-Linux-x86_64.sh
+
 # set path
 ENV PATH /opt/anaconda3/bin:$PATH
 
@@ -27,7 +29,6 @@ RUN pip install --upgrade pip && \
     # optional pkgs
     pip install kaggle && \
     pip install japanize_matplotlib && \
-    pip install lckr-jupyterlab-variableinspector && \
     apt install zip unzip && \
     pip install slack_sdk
 
@@ -40,8 +41,9 @@ RUN mkdir /work && \
 # black theme and line number display settings
 COPY settings/themes.jupyterlab-settings /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/
 COPY settings/tracker.jupyterlab-settings /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/
+
 # kaggle json file settings
 COPY settings/kaggle.json /root/.kaggle/
 
 # execute jupyterlab as a default command
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token='jl'"]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token=''"]
