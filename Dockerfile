@@ -6,6 +6,7 @@ libsm6 \
 libxext6 \
 libxrender-dev \
 libglib2.0-0 \
+git \
 sudo \
 wget \
 tmux \
@@ -30,20 +31,26 @@ RUN pip install --upgrade pip && \
     pip install kaggle && \
     pip install japanize_matplotlib && \
     apt install zip unzip && \
-    pip install slack_sdk
+    pip install slack_sdk && \
+    pip install --upgrade jupyterlab jupyterlab-git
 
 WORKDIR /
-RUN mkdir /work && \
-    mkdir /root/.kaggle && \
-    mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \
-    mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/
+RUN mkdir /work 
 
-# black theme and line number display settings
+# kaggle settings
+RUN mkdir /root/.kaggle 
+COPY settings/kaggle.json /root/.kaggle/
+
+# git settings
+RUN mkdir /root/.ssh
+COPY settings/.ssh /root/.ssh
+COPY settings/.gitconfig /root/.gitconfig
+
+# jupyter-lab extension settings
+RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \
+    mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/
 COPY settings/themes.jupyterlab-settings /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/
 COPY settings/tracker.jupyterlab-settings /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/
-
-# kaggle json file settings
-COPY settings/kaggle.json /root/.kaggle/
 
 # execute jupyterlab as a default command
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token=''"]
