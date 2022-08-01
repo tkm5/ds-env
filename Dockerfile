@@ -6,6 +6,7 @@ libsm6 \
 libxext6 \
 libxrender-dev \
 libglib2.0-0 \
+openssh-client \
 git \
 sudo \
 wget \
@@ -45,6 +46,7 @@ COPY settings/kaggle.json /root/.kaggle/
 RUN mkdir /root/.ssh
 COPY settings/.ssh /root/.ssh
 COPY settings/.gitconfig /root/.gitconfig
+COPY .gitignore /root/.gitignore
 
 # jupyter-lab extension settings
 RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \
