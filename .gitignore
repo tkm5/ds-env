@@ -1,6 +1,9 @@
 # img data
 public-covid-data/
 
+# raw data
+data/
+
 # zip file
 *.zip
 
