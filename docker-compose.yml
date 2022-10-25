@@ -5,9 +5,11 @@ services:
     build: .
     image: 'ds-lab'
     container_name: 'ds-lab'
-    # if you use apple silicon mac, active line below
+    # If you are using an apple silicon Mac, Activate the following line
     platform: linux/x86_64
     ports:
       - '8888:8888'
     volumes:
       - './docker/work:/work'
+    tty: true
+    stdin_open: true
