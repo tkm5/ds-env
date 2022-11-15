@@ -5,7 +5,7 @@ services:
     build: .
     image: 'ds-lab'
     container_name: 'ds-lab'
-    # If you are using an apple silicon Mac, Activate the following line
+    # If you are using an Apple Silicon Mac, Activate the following line
     platform: linux/x86_64
     ports:
       - '8888:8888'
