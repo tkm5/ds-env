@@ -2,12 +2,6 @@ FROM ubuntu:latest
 
 # update
 RUN apt -y update && apt install -y \
-libsm6 \
-libxext6 \
-libxrender-dev \
-libglib2.0-0 \
-openssh-client \
-git \
 sudo \
 wget \
 tmux \
@@ -32,8 +26,7 @@ RUN pip install --upgrade pip && \
     pip install kaggle && \
     pip install japanize_matplotlib && \
     apt install zip unzip && \
-    pip install slack_sdk && \
-    pip install --upgrade jupyterlab jupyterlab-git
+    pip install slack_sdk
 
 WORKDIR /
 RUN mkdir /work 
@@ -41,12 +34,6 @@ RUN mkdir /work
 # kaggle settings
 RUN mkdir /root/.kaggle 
 COPY settings/kaggle.json /root/.kaggle/
-
-# git settings
-RUN mkdir /root/.ssh
-COPY settings/.ssh /root/.ssh
-COPY settings/.gitconfig /root/.gitconfig
-COPY .gitignore /root/.gitignore
 
 # jupyter-lab extension settings
 RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \
