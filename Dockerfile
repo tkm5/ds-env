@@ -12,9 +12,9 @@ WORKDIR /opt
 
 # download anaconda package and install anaconda
 # archive -> https://repo.anaconda.com/archive
-RUN wget https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh && \
-bash /opt/Anaconda3-2022.10-Linux-x86_64.sh -b -p /opt/anaconda3 && \
-rm -f Anaconda3-2022.10-Linux-x86_64.sh
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh && \
+bash /opt/Anaconda3-2023.03-1-Linux-x86_64.sh -b -p /opt/anaconda3 && \
+rm -f Anaconda3-2023.03-1-Linux-x86_64.sh
 
 # set path
 ENV PATH /opt/anaconda3/bin:$PATH
@@ -26,7 +26,22 @@ RUN pip install --upgrade pip && \
     pip install kaggle && \
     pip install japanize_matplotlib && \
     apt install zip unzip && \
-    pip install slack_sdk
+    pip install slack_sdk && \
+    pip install --upgrade scikit-learn && \
+    pip install opencv-python && \
+    pip install nibabel && \
+    pip install --upgrade plotly && \
+    pip install chart_studio && \
+    pip install jupyter-dash && \
+    pip install --upgrade "ipywidgets>=7.6" && \
+    pip install lightgbm && \
+    pip install xgboost && \
+    pip install graphviz && \
+    pip install catboost && \
+    pip install category_encoders && \
+    pip install hyperopt && \
+    # buildkit
+    pip install hpsklearn
 
 WORKDIR /
 RUN mkdir /work 
