@@ -1,1 +1,15 @@
-Django==4.2
+tensorflow
+kaggle
+scikit-learn
+opencv-python
+nibabel
+plotly
+chart_studio
+jupyter-dash
+ipywidgets
+lightgbm
+xgboost
+graphviz
+catboost
+category_encoders
+hyperopt
