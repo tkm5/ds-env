@@ -20,10 +20,11 @@ rm -f Anaconda3-2023.03-1-Linux-x86_64.sh
 ENV PATH /opt/anaconda3/bin:$PATH
 
 # install dependencies
-COPY requirements.txt /opt/
+COPY requirements.txt /opt
 RUN pip install -r requirements.txt
 
-WORKDIR /work
+WORKDIR /
+RUN mkdir /work 
 
 # kaggle settings
 RUN mkdir /root/.kaggle 
