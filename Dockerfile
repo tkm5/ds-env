@@ -19,32 +19,11 @@ rm -f Anaconda3-2023.03-1-Linux-x86_64.sh
 # set path
 ENV PATH /opt/anaconda3/bin:$PATH
 
-# update pip and conda and install packages
-RUN pip install --upgrade pip && \
-    pip install tensorflow && \
-    # optional pkgs
-    pip install kaggle && \
-    pip install japanize_matplotlib && \
-    apt install zip unzip && \
-    pip install slack_sdk && \
-    pip install --upgrade scikit-learn && \
-    pip install opencv-python && \
-    pip install nibabel && \
-    pip install --upgrade plotly && \
-    pip install chart_studio && \
-    pip install jupyter-dash && \
-    pip install --upgrade "ipywidgets>=7.6" && \
-    pip install lightgbm && \
-    pip install xgboost && \
-    pip install graphviz && \
-    pip install catboost && \
-    pip install category_encoders && \
-    pip install hyperopt && \
-    # buildkit
-    pip install hpsklearn
+# install dependencies
+COPY requirements.txt /opt/
+RUN pip install -r requirements.txt
 
-WORKDIR /
-RUN mkdir /work 
+WORKDIR /work
 
 # kaggle settings
 RUN mkdir /root/.kaggle 

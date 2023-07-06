@@ -19,10 +19,10 @@ token/
 .ssh/
 .gitconfig
 
-# other files
-
+# misc
 sukkiri/
 job/
 .DS_Store
 .idea/
 .tmp.driveupload
+__pycache__

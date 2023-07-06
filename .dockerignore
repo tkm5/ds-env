@@ -1,0 +1,9 @@
+# development files
+.idea/
+venv
+.git/
+Dockerfile
+
+# misc
+.DS_Store
+__pycache__
