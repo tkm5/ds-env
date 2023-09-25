@@ -21,7 +21,7 @@ ENV PATH /opt/anaconda3/bin:$PATH
 
 # install dependencies
 COPY requirements.txt /opt
-RUN pip install -r requirements.txt
+RUN pip install -r /opt/requirements.txt
 
 WORKDIR /
 RUN mkdir /work 
