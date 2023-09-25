@@ -20,8 +20,8 @@ export DOCKER_DEFAULT_PLATFORM=linux/x86_64
 ## Building and Running the DS-Lab Environment
 1. Clone this repository:
     ```shell
-    git clone [repository-url]
-    cd [repository-directory]
+    git clone https://github.com/tkm5/ds-env.git
+    cd ds-env
     ```
 2. Build and start the DS-Lab container:
     ```shell
