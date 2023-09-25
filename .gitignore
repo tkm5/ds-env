@@ -1,6 +1,3 @@
-# img data
-public-covid-data/
-
 # raw data
 data/
 
@@ -20,8 +17,6 @@ token/
 .gitconfig
 
 # misc
-sukkiri/
-job/
 .DS_Store
 .idea/
 .tmp.driveupload

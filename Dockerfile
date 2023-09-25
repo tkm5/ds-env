@@ -6,6 +6,7 @@ sudo \
 wget \
 tmux \
 emacs
+RUN apt clean && rm -rf /var/lib/apt/lists/*
 
 #install anaconda3
 WORKDIR /opt
@@ -21,14 +22,10 @@ ENV PATH /opt/anaconda3/bin:$PATH
 
 # install dependencies
 COPY requirements.txt /opt
-RUN pip install -r requirements.txt
+RUN pip install -r /opt/requirements.txt
 
 WORKDIR /
-RUN mkdir /work 
-
-# kaggle settings
-RUN mkdir /root/.kaggle 
-COPY settings/kaggle.json /root/.kaggle/
+RUN mkdir /work
 
 # jupyter-lab extension settings
 RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \
