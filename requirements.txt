@@ -1,4 +1,6 @@
 tensorflow
+torch
+torchvision
 kaggle
 scikit-learn
 opencv-python
