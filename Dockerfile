@@ -12,9 +12,9 @@ WORKDIR /opt
 
 # download anaconda package and install anaconda
 # archive -> https://repo.anaconda.com/archive
-RUN wget https://repo.anaconda.com/archive/Anaconda3-2023.07-2-Linux-x86_64.sh && \
-bash /opt/Anaconda3-2023.07-2-Linux-x86_64.sh -b -p /opt/anaconda3 && \
-rm -f Anaconda3-2023.07-2-Linux-x86_64.sh
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2024.06-1-Linux-x86_64.sh && \
+bash /opt/Anaconda3-2024.06-1-Linux-x86_64.sh -b -p /opt/anaconda3 && \
+rm -f Anaconda3-2024.06-1-Linux-x86_64.sh
 
 # set path
 ENV PATH /opt/anaconda3/bin:$PATH
@@ -23,12 +23,12 @@ ENV PATH /opt/anaconda3/bin:$PATH
 COPY requirements.txt /opt
 RUN pip install -r /opt/requirements.txt
 
-WORKDIR /
-RUN mkdir /work 
+WORKDIR /word
+# RUN mkdir /work 
 
-# kaggle settings
-RUN mkdir /root/.kaggle 
-COPY settings/kaggle.json /root/.kaggle/
+# # kaggle settings
+# RUN mkdir /root/.kaggle 
+# COPY settings/kaggle.json /root/.kaggle/
 
 # jupyter-lab extension settings
 RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/ && \

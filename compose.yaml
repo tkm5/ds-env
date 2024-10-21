@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   notebook:
     build: .
@@ -9,5 +7,4 @@ services:
       - '8888:8888'
     volumes:
       - './docker/work:/work'
-    tty: true
-    stdin_open: true
+    restart: always
